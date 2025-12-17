@@ -205,3 +205,15 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+# 忽略解壓縮後的資料集資料夾
+dataset/
+data/
+src/dataset/
+
+# 忽略所有 jpg, png 圖片 (以免不小心 add 進去)
+*.jpg
+*.png
+*.bmp
+
+# 但不要忽略 dataset.zip (除非檔案大於 100MB)
+!dataset.zip
