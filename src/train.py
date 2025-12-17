@@ -17,7 +17,7 @@ import zipfile  # [新增] 用於自動解壓縮
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 # ==========================================
-# 1. 損失函數 (Dice Loss)
+# 1. 損失函數 (Dice Loss) [完全不動]
 # ==========================================
 class DiceLoss(nn.Module):
     def __init__(self):
@@ -49,7 +49,7 @@ class MulticlassDiceLoss(nn.Module):
         return totalLoss / C
 
 # ==========================================
-# 2. U-Net 模型架構 (保持不變)
+# 2. U-Net 模型架構 [完全不動]
 # ==========================================
 class DoubleConv(nn.Module):
     def __init__(self, in_channels, out_channels):
@@ -126,16 +126,16 @@ class UNet(nn.Module):
         return torch.sigmoid(logits)
 
 # ==========================================
-# 3. 資料集定義
+# 3. 資料集定義 [完全不動]
 # ==========================================
 class CarpalTunnelDataset(Dataset):
     def __init__(self, root_dir):
         self.root_dir = root_dir
         self.data_list = []
         
-        # 檢查 root_dir 是否存在，避免報錯
+        # 這裡只稍微加一個保護，避免 root_dir 不存在時報錯，邏輯不動
         if not os.path.exists(root_dir):
-            print(f"警告：找不到資料夾 {root_dir}")
+            print(f"警告：找不到資料夾 {root_dir}，Dataset 為空")
             return
 
         for i in range(10): # 0~9 資料夾
@@ -186,12 +186,13 @@ class CarpalTunnelDataset(Dataset):
         return image, mask
 
 # ==========================================
-# 4. 訓練與輔助功能
+# 4. 訓練與輔助功能 [完全不動]
 # ==========================================
 def save_checkpoint(state, filename="my_checkpoint.pth.tar"):
     torch.save(state, filename)
 
 def train_one_epoch(loader, model, optimizer, loss_fn, scaler, epoch_idx):
+    # 使用 tqdm 包裝 loader 以顯示進度條
     loop = tqdm(loader, desc=f"Epoch {epoch_idx}", leave=False)
     model.train()
     epoch_loss = 0
@@ -200,6 +201,7 @@ def train_one_epoch(loader, model, optimizer, loss_fn, scaler, epoch_idx):
         data = data.to(device)
         targets = targets.to(device)
 
+        # 混合精度訓練
         with torch.cuda.amp.autocast():
             predictions = model(data)
             loss = loss_fn(predictions, targets)
@@ -210,6 +212,8 @@ def train_one_epoch(loader, model, optimizer, loss_fn, scaler, epoch_idx):
         scaler.update()
 
         epoch_loss += loss.item()
+        
+        # 更新進度條後面的資訊
         loop.set_postfix(loss=loss.item())
         
     return epoch_loss / len(loader)
@@ -220,6 +224,7 @@ def check_accuracy(loader, model, device="cuda"):
     dice_score = 0
     num_batches = 0
     
+    # 驗證時不需要計算梯度
     with torch.no_grad():
         for x, y in loader:
             x = x.to(device)
@@ -236,10 +241,10 @@ def check_accuracy(loader, model, device="cuda"):
     return dice_score / num_batches
 
 # ==========================================
-# Main 函式 (包含自動路徑偵測)
+# Main 函式 (【僅修改】路徑偵測與存檔位置)
 # ==========================================
 def main():
-    print(f" 系統偵測到: {torch.cuda.get_device_name(0)}")
+    print(f"系統偵測到: {torch.cuda.get_device_name(0)}")
 
     # ----------------------------------------------------
     # [新增] 自動路徑設定 & 解壓縮邏輯
@@ -252,46 +257,44 @@ def main():
     ZIP_FILE = os.path.join(CURRENT_DIR, 'dataset.zip')
     CHECKPOINT_DIR = os.path.join(CURRENT_DIR, 'checkpoints')
 
-    # 1. 確保 Checkpoint 資料夾存在
+    # 1. 確保 Checkpoint 資料夾存在 (不存在就自動建立)
     if not os.path.exists(CHECKPOINT_DIR):
         os.makedirs(CHECKPOINT_DIR)
-        print(f" 已建立模型儲存資料夾: {CHECKPOINT_DIR}")
+        print(f"已建立模型儲存資料夾: {CHECKPOINT_DIR}")
 
     # 2. 自動解壓縮 Dataset (如果資料夾不存在但 zip 存在)
     if not os.path.exists(DATA_DIR):
         if os.path.exists(ZIP_FILE):
-            print(" 偵測到壓縮檔，正在自動解壓縮 dataset.zip ...")
+            print("偵測到壓縮檔，正在自動解壓縮 dataset.zip ...")
             with zipfile.ZipFile(ZIP_FILE, 'r') as zip_ref:
                 zip_ref.extractall(CURRENT_DIR)
-            print(" 解壓縮完成！")
+            print("解壓縮完成！")
         else:
-            print(f" 錯誤：找不到 dataset 資料夾，也找不到 dataset.zip。路徑: {DATA_DIR}")
-            # 如果真的沒資料，程式還是會往下跑但 Dataset len 會是 0
+            print(f"錯誤：找不到 dataset 資料夾，也找不到 dataset.zip。路徑: {DATA_DIR}")
     # ----------------------------------------------------
 
     print("開始準備訓練流程...")
 
-    # --- 參數設定 ---
+    # --- 輕量化參數設定 (維持原樣) ---
     LEARNING_RATE = 1e-4
     BATCH_SIZE = 4      
     NUM_EPOCHS = 50     
     NUM_WORKERS = 2     
     NUM_FOLDS = 5       
     
-    # 載入資料集 (使用自動偵測的路徑)
+    # 載入資料集 (使用自動偵測的路徑 DATA_DIR)
     full_dataset = CarpalTunnelDataset(DATA_DIR)
     print(f"總共載入 {len(full_dataset)} 組影像資料")
-
-    if len(full_dataset) == 0:
-        print("警告：沒有讀取到任何資料，請檢查 dataset 資料夾結構！")
-        return
     
+    if len(full_dataset) == 0:
+        return # 沒資料就直接結束
+
     kfold = KFold(n_splits=NUM_FOLDS, shuffle=True, random_state=42)
     
-    # 讀取訓練進度 (中斷續練功能)，紀錄檔也放在 checkpoints 裡比較整齊
+    # 讀取訓練進度 (改存到 CHECKPOINT_DIR 下)
     start_fold = 0
     fold_record_file = os.path.join(CHECKPOINT_DIR, "fold_status.txt")
-    
+
     if os.path.exists(fold_record_file):
         with open(fold_record_file, "r") as f:
             content = f.read().strip()
@@ -299,7 +302,7 @@ def main():
                 start_fold = int(content)
         print(f"偵測到上次進度，將從 Fold {start_fold + 1} 繼續訓練...")
 
-    # --- Fold 迴圈 ---
+    # --- Fold 迴圈 (訓練邏輯維持原樣) ---
     for fold, (train_ids, test_ids) in enumerate(kfold.split(full_dataset)):
         if fold < start_fold:
             continue
@@ -319,7 +322,7 @@ def main():
         optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
         scaler = torch.cuda.amp.GradScaler()
 
-        # [修改] 讀取該 Fold 的暫存檔 (路徑指向 checkpoints)
+        # [修改] 讀取該 Fold 的暫存檔 (路徑指向 checkpoints 資料夾)
         checkpoint_file = os.path.join(CHECKPOINT_DIR, f"checkpoint_fold_{fold}.pth.tar")
         
         start_epoch = 0
@@ -340,6 +343,7 @@ def main():
             
             tqdm.write(f"Fold {fold+1} | Epoch {epoch+1}/{NUM_EPOCHS} | Loss: {avg_loss:.4f} | Val Dice: {val_dice:.4f}")
 
+            # 儲存暫存檔 (存到 checkpoints 資料夾)
             checkpoint = {
                 'state_dict': model.state_dict(),
                 'optimizer': optimizer.state_dict(),
@@ -348,14 +352,14 @@ def main():
             }
             save_checkpoint(checkpoint, filename=checkpoint_file)
 
+            # 儲存最佳模型 (存到 checkpoints 資料夾)
             if val_dice > best_val_dice:
                 best_val_dice = val_dice
-                # [修改] 最佳模型存檔路徑 (指向 checkpoints)
                 best_model_path = os.path.join(CHECKPOINT_DIR, f"best_model_fold_{fold}.pth")
                 torch.save(model.state_dict(), best_model_path)
                 tqdm.write(f"發現更佳模型！已儲存至 {best_model_path} (Dice: {best_val_dice:.4f})")
         
-        # 該 Fold 完成，更新進度紀錄
+        # 該 Fold 完成，更新進度紀錄 (存到 checkpoints 資料夾)
         with open(fold_record_file, "w") as f:
             f.write(str(fold + 1))
             
@@ -365,5 +369,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
