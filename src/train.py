@@ -353,7 +353,7 @@ def main():
                 # [修改] 最佳模型存檔路徑 (指向 checkpoints)
                 best_model_path = os.path.join(CHECKPOINT_DIR, f"best_model_fold_{fold}.pth")
                 torch.save(model.state_dict(), best_model_path)
-                tqdm.write(f"💾 發現更佳模型！已儲存至 {best_model_path} (Dice: {best_val_dice:.4f})")
+                tqdm.write(f"發現更佳模型！已儲存至 {best_model_path} (Dice: {best_val_dice:.4f})")
         
         # 該 Fold 完成，更新進度紀錄
         with open(fold_record_file, "w") as f:
@@ -365,4 +365,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
