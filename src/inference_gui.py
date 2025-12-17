@@ -120,6 +120,18 @@ class SliderGUI:
         self.root.title("Carpal Tunnel Player (Video Mode)")
         self.root.geometry("1400x850")
         
+        # --- [新增] 路徑自動偵測邏輯 ---
+        self.base_dir = os.path.dirname(os.path.abspath(__file__))
+        self.checkpoints_dir = os.path.join(self.base_dir, 'checkpoints')
+        self.dataset_dir = os.path.join(self.base_dir, 'dataset')
+        
+        # 確保資料夾變數存在 (防呆)
+        if not os.path.exists(self.checkpoints_dir):
+            self.checkpoints_dir = self.base_dir
+        if not os.path.exists(self.dataset_dir):
+            self.dataset_dir = self.base_dir
+        # -----------------------------
+        
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.model = None
         self.data_list = [] 
@@ -134,7 +146,7 @@ class SliderGUI:
         self.lbl_model = tk.Label(self.left, text="Not Loaded", fg="red", bg="#f0f0f0")
         self.lbl_model.pack(anchor="w")
 
-        tk.Label(self.left, text="Step 2. 選擇資料夾 (data/0)", font=("Arial", 11, "bold"), bg="#f0f0f0").pack(anchor="w", pady=(15,5))
+        tk.Label(self.left, text="Step 2. 選擇資料夾 (dataset/0)", font=("Arial", 11, "bold"), bg="#f0f0f0").pack(anchor="w", pady=(15,5))
         tk.Button(self.left, text="Select Folder", command=self.load_folder_dialog).pack(fill=tk.X)
         self.lbl_folder = tk.Label(self.left, text="No Folder", fg="blue", bg="#f0f0f0")
         self.lbl_folder.pack(anchor="w")
@@ -189,25 +201,33 @@ class SliderGUI:
         tk.Label(legend, text="■ FT (Blue)", fg="blue", font=("Arial", 10, "bold")).pack(side=tk.LEFT, padx=10)
         tk.Label(legend, text="■ CT (Red)", fg="red", font=("Arial", 10, "bold")).pack(side=tk.LEFT, padx=10)
 
-        # 自動載入
-        if os.path.exists("best_model_fold_0.pth"):
-            self.load_model("best_model_fold_0.pth")
+        # [修改] 自動載入 (偵測 checkpoints 資料夾內的模型)
+        default_model = os.path.join(self.checkpoints_dir, "best_model_fold_0.pth")
+        if os.path.exists(default_model):
+            self.load_model(default_model)
+        else:
+            # 備用：檢查當前目錄
+            local_model = "best_model_fold_0.pth"
+            if os.path.exists(local_model):
+                self.load_model(local_model)
 
     def load_model_dialog(self):
-        p = filedialog.askopenfilename(filetypes=[("Model", "*.pth")])
+        # [修改] 預設打開 checkpoints 資料夾
+        p = filedialog.askopenfilename(initialdir=self.checkpoints_dir, filetypes=[("Model", "*.pth")])
         if p: self.load_model(p)
 
     def load_model(self, p):
         try:
             self.model = UNet(n_channels=2, n_classes=3).to(self.device)
-            self.model.load_state_dict(torch.load(p, map_location=self.device, weights_only=True))
+            self.model.load_state_dict(torch.load(p, map_location=self.device)) # 移除 weights_only 以相容舊版 torch
             self.model.eval()
             self.lbl_model.config(text=f"Loaded: {os.path.basename(p)}", fg="green")
         except Exception as e:
-            messagebox.showerror("Error", str(e))
+            messagebox.showerror("Error", f"Failed to load model:\n{str(e)}")
 
     def load_folder_dialog(self):
-        f = filedialog.askdirectory()
+        # [修改] 預設打開 dataset 資料夾
+        f = filedialog.askdirectory(initialdir=self.dataset_dir)
         if f: self.load_data(f)
 
     def load_data(self, folder):
@@ -216,16 +236,18 @@ class SliderGUI:
         
         t1_dir = os.path.join(folder, "T1")
         if not os.path.exists(t1_dir):
-            messagebox.showerror("Error", "No T1 folder!")
+            messagebox.showerror("Error", "No T1 folder found in selected directory!")
             return
             
         files = glob.glob(os.path.join(t1_dir, "*.jpg"))
+        if not files: # 嘗試找 png
+             files = glob.glob(os.path.join(t1_dir, "*.png"))
         
-        # 【關鍵】排序：確保 0, 1, 2... 10 順序正確 (依照檔名數字)
+        # 排序：確保 0, 1, 2... 順序正確
         try:
             files.sort(key=lambda x: int(os.path.splitext(os.path.basename(x))[0]))
         except:
-            files.sort() # 如果檔名不是純數字，就用一般排序
+            files.sort()
 
         if not files:
             messagebox.showwarning("Warning", "Empty folder!")
@@ -260,8 +282,12 @@ class SliderGUI:
         d = self.data_list[idx]
         
         trans = transforms.ToTensor()
-        t1 = Image.open(d['t1']).convert('L')
-        t2 = Image.open(d['t2']).convert('L')
+        try:
+            t1 = Image.open(d['t1']).convert('L')
+            t2 = Image.open(d['t2']).convert('L')
+        except:
+            return None, None
+
         if t1.size != t2.size: t2 = t2.resize(t1.size)
         inp = torch.cat((trans(t1), trans(t2)), dim=0).unsqueeze(0)
         
