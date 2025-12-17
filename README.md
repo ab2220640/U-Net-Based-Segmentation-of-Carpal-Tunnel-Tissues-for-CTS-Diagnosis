@@ -22,10 +22,10 @@ The system includes a **professional-grade GUI** for interactive inference, allo
 
 ## Key Features
 
-* [cite_start]**🧬 Multi-Modal Fusion**: Takes both **T1** and **T2** MRI images as a 2-channel input to maximize tissue contrast and segmentation accuracy[cite: 37, 38].
+* [cite_start]**Multi-Modal Fusion**: Takes both **T1** and **T2** MRI images as a 2-channel input to maximize tissue contrast and segmentation accuracy[cite: 37, 38].
 * **Robust U-Net Architecture**: Features Bilinear Upsampling and Double Convolution blocks for high-resolution boundary detection.
 * **Efficient Training**: Implements **Mixed Precision Training (AMP)** and **5-Fold Cross Validation** for optimal performance on consumer-grade GPUs (e.g., RTX 4060).
-* **🖥️ Interactive Player (GUI)**:
+* **Interactive Player (GUI)**:
     * Slider-based MRI slice navigation.
     * Real-time Dice Coefficient (DSC) calculation.
     * Color-coded segmentation overlays (Ground Truth vs. AI Prediction).
