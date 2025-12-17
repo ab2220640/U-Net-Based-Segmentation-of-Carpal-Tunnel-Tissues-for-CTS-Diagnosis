@@ -51,3 +51,10 @@ The model is evaluated using the Dice Coefficient (DSC) based on 5-fold cross-va
 | **Median Nerve (MN)** 🟡 | **0.81 - 0.90** |
 | **Flexor Tendons (FT)** 🔵 | **0.83 - 0.92** |
 | **Carpal Tunnel (CT)** 🔴 | **0.83 - 0.95** |
+
+## Installation
+1. Clone the Repository
+```bash
+git clone [https://github.com/YOUR_USERNAME/U-Net-Based-Segmentation-of-Carpal-Tunnel-Tissues.git](https://github.com/YOUR_USERNAME/U-Net-Based-Segmentation-of-Carpal-Tunnel-Tissues.git)
+cd U-Net-Based-Segmentation-of-Carpal-Tunnel-Tissues
+```
