@@ -5,13 +5,13 @@ Expert-level MRI Segmentation for Carpal Tunnel Syndrome (CTS). Uses U-Net to is
 
 This project implements a Deep Learning solution to segment wrist tissues (Median Nerve, Flexor Tendons, Carpal Tunnel) from MRI images.
 
-## 📂 Project Content
+##  Project Structure
 * **`train.py`**: The main training script (U-Net architecture).
-* **`inference_gui.py`**: Graphical User Interface (GUI) for visualization.
-* **`dataset/`**: Contains the MRI dataset (T1/T2 images and Ground Truth).
+* **`inference_gui.py`**: The Graphical User Interface (GUI) for visualization.
+* **`dataset.zip`**: Compressed MRI dataset (Contains T1/T2 images and Ground Truth).
 
-## 🚀 How to Run
+##  How to Run
 
-### 1. Install Requirements
+### 1. Install Dependencies
 ```bash
 pip install -r requirements.txt
