@@ -71,8 +71,8 @@ pip install -r requirements.txt
 3. Dataset Preparation
 Important: The training script looks for the dataset in the src/ folder.
 
-1.Compress your dataset folders (0-9) into a file named dataset.zip.
+   1.Compress your dataset folders (0-9) into a file named dataset.zip.
 
-2.Place dataset.zip inside the src/ folder (or the project root).
+   2.Place dataset.zip inside the src/ folder (or the project root).
 
-3.The train.py script will automatically unzip it upon first run.
+   3.The train.py script will automatically unzip it upon first run.
