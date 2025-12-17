@@ -16,8 +16,8 @@ This project implements a Deep Learning solution to segment wrist tissues (Media
 ```bash
 pip install -r requirements.txt
 ```
-###2. Prepare the Dataset
+### 2. Prepare the Dataset
 Important: Please unzip the dataset before running the code.
 ```bash
 unzip dataset.zip
-# Ensure the extracted folder is named 'dataset' or matches the path in train.py
+```
