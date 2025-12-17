@@ -83,5 +83,5 @@ Run the training script from the root directory. The script uses Mixed Precision
 ```bash
 python src/train.py
 ```
-      Note: Checkpoints will be saved in the checkpoints/ folder. The best model for each fold is saved as best_model_fold_X.pth.
+  Note: Checkpoints will be saved in the checkpoints/ folder. The best model for each fold is saved as best_model_fold_X.pth.
 
