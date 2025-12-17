@@ -9,6 +9,7 @@ from PIL import Image
 import numpy as np
 from sklearn.model_selection import KFold
 from tqdm import tqdm  # 導入進度條套件
+import zipfile  # [新增] 用於自動解壓縮
 
 # ==========================================
 # 設定裝置
@@ -48,7 +49,7 @@ class MulticlassDiceLoss(nn.Module):
         return totalLoss / C
 
 # ==========================================
-# 2. U-Net 模型架構
+# 2. U-Net 模型架構 (保持不變)
 # ==========================================
 class DoubleConv(nn.Module):
     def __init__(self, in_channels, out_channels):
@@ -132,6 +133,11 @@ class CarpalTunnelDataset(Dataset):
         self.root_dir = root_dir
         self.data_list = []
         
+        # 檢查 root_dir 是否存在，避免報錯
+        if not os.path.exists(root_dir):
+            print(f"警告：找不到資料夾 {root_dir}")
+            return
+
         for i in range(10): # 0~9 資料夾
             case_path = os.path.join(root_dir, str(i))
             # 搜尋圖片，支援 jpg 或 png
@@ -186,7 +192,6 @@ def save_checkpoint(state, filename="my_checkpoint.pth.tar"):
     torch.save(state, filename)
 
 def train_one_epoch(loader, model, optimizer, loss_fn, scaler, epoch_idx):
-    # 使用 tqdm 包裝 loader 以顯示進度條
     loop = tqdm(loader, desc=f"Epoch {epoch_idx}", leave=False)
     model.train()
     epoch_loss = 0
@@ -195,7 +200,6 @@ def train_one_epoch(loader, model, optimizer, loss_fn, scaler, epoch_idx):
         data = data.to(device)
         targets = targets.to(device)
 
-        # 混合精度訓練 (節省 4060 顯存)
         with torch.cuda.amp.autocast():
             predictions = model(data)
             loss = loss_fn(predictions, targets)
@@ -206,8 +210,6 @@ def train_one_epoch(loader, model, optimizer, loss_fn, scaler, epoch_idx):
         scaler.update()
 
         epoch_loss += loss.item()
-        
-        # 更新進度條後面的資訊
         loop.set_postfix(loss=loss.item())
         
     return epoch_loss / len(loader)
@@ -218,7 +220,6 @@ def check_accuracy(loader, model, device="cuda"):
     dice_score = 0
     num_batches = 0
     
-    # 驗證時不需要計算梯度
     with torch.no_grad():
         for x, y in loader:
             x = x.to(device)
@@ -234,27 +235,63 @@ def check_accuracy(loader, model, device="cuda"):
     if num_batches == 0: return 0
     return dice_score / num_batches
 
+# ==========================================
+# Main 函式 (包含自動路徑偵測)
+# ==========================================
 def main():
     print(f"✅ 系統偵測到: {torch.cuda.get_device_name(0)}")
+
+    # ----------------------------------------------------
+    # [新增] 自動路徑設定 & 解壓縮邏輯
+    # ----------------------------------------------------
+    # 取得 train.py 所在的絕對路徑
+    CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+    
+    # 定義資料夾與檔案路徑
+    DATA_DIR = os.path.join(CURRENT_DIR, 'dataset')
+    ZIP_FILE = os.path.join(CURRENT_DIR, 'dataset.zip')
+    CHECKPOINT_DIR = os.path.join(CURRENT_DIR, 'checkpoints')
+
+    # 1. 確保 Checkpoint 資料夾存在
+    if not os.path.exists(CHECKPOINT_DIR):
+        os.makedirs(CHECKPOINT_DIR)
+        print(f"📁 已建立模型儲存資料夾: {CHECKPOINT_DIR}")
+
+    # 2. 自動解壓縮 Dataset (如果資料夾不存在但 zip 存在)
+    if not os.path.exists(DATA_DIR):
+        if os.path.exists(ZIP_FILE):
+            print("📦 偵測到壓縮檔，正在自動解壓縮 dataset.zip ...")
+            with zipfile.ZipFile(ZIP_FILE, 'r') as zip_ref:
+                zip_ref.extractall(CURRENT_DIR)
+            print("✅ 解壓縮完成！")
+        else:
+            print(f"❌ 錯誤：找不到 dataset 資料夾，也找不到 dataset.zip。路徑: {DATA_DIR}")
+            # 如果真的沒資料，程式還是會往下跑但 Dataset len 會是 0
+    # ----------------------------------------------------
+
     print("🚀 開始準備訓練流程...")
 
-    # --- 輕量化參數設定 (針對 RTX 4060 + i7) ---
+    # --- 參數設定 ---
     LEARNING_RATE = 1e-4
-    BATCH_SIZE = 4      # 4060 8GB 建議設為 4，若出現 OOM (記憶體不足) 請改為 2
-    NUM_EPOCHS = 50     # 每個 Fold 跑 50 輪
-    NUM_WORKERS = 2     # 使用 2 個 CPU 核心讀圖，避免電腦卡頓
-    NUM_FOLDS = 5       # 5折交叉驗證
-    DATA_DIR = "./data" # 請確保資料夾結構正確
+    BATCH_SIZE = 4      
+    NUM_EPOCHS = 50     
+    NUM_WORKERS = 2     
+    NUM_FOLDS = 5       
     
-    # 載入資料集
+    # 載入資料集 (使用自動偵測的路徑)
     full_dataset = CarpalTunnelDataset(DATA_DIR)
     print(f"📂 總共載入 {len(full_dataset)} 組影像資料")
+
+    if len(full_dataset) == 0:
+        print("⚠️ 警告：沒有讀取到任何資料，請檢查 dataset 資料夾結構！")
+        return
     
     kfold = KFold(n_splits=NUM_FOLDS, shuffle=True, random_state=42)
     
-    # 讀取訓練進度 (中斷續練功能)
+    # 讀取訓練進度 (中斷續練功能)，紀錄檔也放在 checkpoints 裡比較整齊
     start_fold = 0
-    fold_record_file = "fold_status.txt"
+    fold_record_file = os.path.join(CHECKPOINT_DIR, "fold_status.txt")
+    
     if os.path.exists(fold_record_file):
         with open(fold_record_file, "r") as f:
             content = f.read().strip()
@@ -274,7 +311,6 @@ def main():
         train_subsampler = Subset(full_dataset, train_ids)
         test_subsampler = Subset(full_dataset, test_ids)
         
-        # Windows 系統下，DataLoader 需要在 if __name__ == '__main__': 區塊內運行
         train_loader = DataLoader(train_subsampler, batch_size=BATCH_SIZE, shuffle=True, num_workers=NUM_WORKERS, pin_memory=True)
         test_loader = DataLoader(test_subsampler, batch_size=BATCH_SIZE, shuffle=False, num_workers=NUM_WORKERS, pin_memory=True)
         
@@ -283,8 +319,9 @@ def main():
         optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
         scaler = torch.cuda.amp.GradScaler()
 
-        # 讀取該 Fold 的暫存檔 (Checkpoint)
-        checkpoint_file = f"checkpoint_fold_{fold}.pth.tar"
+        # [修改] 讀取該 Fold 的暫存檔 (路徑指向 checkpoints)
+        checkpoint_file = os.path.join(CHECKPOINT_DIR, f"checkpoint_fold_{fold}.pth.tar")
+        
         start_epoch = 0
         best_val_dice = 0
         
@@ -301,10 +338,8 @@ def main():
             avg_loss = train_one_epoch(train_loader, model, optimizer, loss_fn, scaler, epoch+1)
             val_dice = check_accuracy(test_loader, model, device=device)
             
-            # 使用 tqdm.write 避免打亂進度條
             tqdm.write(f"📊 Fold {fold+1} | Epoch {epoch+1}/{NUM_EPOCHS} | Loss: {avg_loss:.4f} | Val Dice: {val_dice:.4f}")
 
-            # 儲存暫存檔 (每次都存，防斷電)
             checkpoint = {
                 'state_dict': model.state_dict(),
                 'optimizer': optimizer.state_dict(),
@@ -313,11 +348,12 @@ def main():
             }
             save_checkpoint(checkpoint, filename=checkpoint_file)
 
-            # 儲存最佳模型 (只存表現最好的)
             if val_dice > best_val_dice:
                 best_val_dice = val_dice
-                torch.save(model.state_dict(), f"best_model_fold_{fold}.pth")
-                tqdm.write(f"💾 發現更佳模型！已儲存 (Dice: {best_val_dice:.4f})")
+                # [修改] 最佳模型存檔路徑 (指向 checkpoints)
+                best_model_path = os.path.join(CHECKPOINT_DIR, f"best_model_fold_{fold}.pth")
+                torch.save(model.state_dict(), best_model_path)
+                tqdm.write(f"💾 發現更佳模型！已儲存至 {best_model_path} (Dice: {best_val_dice:.4f})")
         
         # 該 Fold 完成，更新進度紀錄
         with open(fold_record_file, "w") as f:
@@ -328,5 +364,4 @@ def main():
     print("\n🎉 全數訓練完成！檔案已生成。")
 
 if __name__ == "__main__":
-    # Windows 必須加這行保護，否則多執行緒 (num_workers) 會報錯
     main()
