@@ -239,7 +239,7 @@ def check_accuracy(loader, model, device="cuda"):
 # Main 函式 (包含自動路徑偵測)
 # ==========================================
 def main():
-    print(f"✅ 系統偵測到: {torch.cuda.get_device_name(0)}")
+    print(f" 系統偵測到: {torch.cuda.get_device_name(0)}")
 
     # ----------------------------------------------------
     # [新增] 自動路徑設定 & 解壓縮邏輯
@@ -255,21 +255,21 @@ def main():
     # 1. 確保 Checkpoint 資料夾存在
     if not os.path.exists(CHECKPOINT_DIR):
         os.makedirs(CHECKPOINT_DIR)
-        print(f"📁 已建立模型儲存資料夾: {CHECKPOINT_DIR}")
+        print(f" 已建立模型儲存資料夾: {CHECKPOINT_DIR}")
 
     # 2. 自動解壓縮 Dataset (如果資料夾不存在但 zip 存在)
     if not os.path.exists(DATA_DIR):
         if os.path.exists(ZIP_FILE):
-            print("📦 偵測到壓縮檔，正在自動解壓縮 dataset.zip ...")
+            print(" 偵測到壓縮檔，正在自動解壓縮 dataset.zip ...")
             with zipfile.ZipFile(ZIP_FILE, 'r') as zip_ref:
                 zip_ref.extractall(CURRENT_DIR)
-            print("✅ 解壓縮完成！")
+            print(" 解壓縮完成！")
         else:
-            print(f"❌ 錯誤：找不到 dataset 資料夾，也找不到 dataset.zip。路徑: {DATA_DIR}")
+            print(f" 錯誤：找不到 dataset 資料夾，也找不到 dataset.zip。路徑: {DATA_DIR}")
             # 如果真的沒資料，程式還是會往下跑但 Dataset len 會是 0
     # ----------------------------------------------------
 
-    print("🚀 開始準備訓練流程...")
+    print("開始準備訓練流程...")
 
     # --- 參數設定 ---
     LEARNING_RATE = 1e-4
@@ -280,10 +280,10 @@ def main():
     
     # 載入資料集 (使用自動偵測的路徑)
     full_dataset = CarpalTunnelDataset(DATA_DIR)
-    print(f"📂 總共載入 {len(full_dataset)} 組影像資料")
+    print(f"總共載入 {len(full_dataset)} 組影像資料")
 
     if len(full_dataset) == 0:
-        print("⚠️ 警告：沒有讀取到任何資料，請檢查 dataset 資料夾結構！")
+        print("警告：沒有讀取到任何資料，請檢查 dataset 資料夾結構！")
         return
     
     kfold = KFold(n_splits=NUM_FOLDS, shuffle=True, random_state=42)
@@ -297,7 +297,7 @@ def main():
             content = f.read().strip()
             if content:
                 start_fold = int(content)
-        print(f"🔄 偵測到上次進度，將從 Fold {start_fold + 1} 繼續訓練...")
+        print(f"偵測到上次進度，將從 Fold {start_fold + 1} 繼續訓練...")
 
     # --- Fold 迴圈 ---
     for fold, (train_ids, test_ids) in enumerate(kfold.split(full_dataset)):
@@ -305,7 +305,7 @@ def main():
             continue
             
         print(f'\n========================================')
-        print(f'🔥 現在開始 Fold {fold+1}/{NUM_FOLDS}')
+        print(f'現在開始 Fold {fold+1}/{NUM_FOLDS}')
         print(f'========================================')
         
         train_subsampler = Subset(full_dataset, train_ids)
@@ -326,7 +326,7 @@ def main():
         best_val_dice = 0
         
         if os.path.exists(checkpoint_file):
-            print(f"📥 載入 Fold {fold+1} 的存檔點...")
+            print(f"載入 Fold {fold+1} 的存檔點...")
             checkpoint = torch.load(checkpoint_file)
             model.load_state_dict(checkpoint['state_dict'])
             optimizer.load_state_dict(checkpoint['optimizer'])
@@ -338,7 +338,7 @@ def main():
             avg_loss = train_one_epoch(train_loader, model, optimizer, loss_fn, scaler, epoch+1)
             val_dice = check_accuracy(test_loader, model, device=device)
             
-            tqdm.write(f"📊 Fold {fold+1} | Epoch {epoch+1}/{NUM_EPOCHS} | Loss: {avg_loss:.4f} | Val Dice: {val_dice:.4f}")
+            tqdm.write(f"Fold {fold+1} | Epoch {epoch+1}/{NUM_EPOCHS} | Loss: {avg_loss:.4f} | Val Dice: {val_dice:.4f}")
 
             checkpoint = {
                 'state_dict': model.state_dict(),
@@ -359,9 +359,10 @@ def main():
         with open(fold_record_file, "w") as f:
             f.write(str(fold + 1))
             
-        print(f"✅ Fold {fold+1} 訓練結束！最佳 Dice Score: {best_val_dice:.4f}")
+        print(f"Fold {fold+1} 訓練結束！最佳 Dice Score: {best_val_dice:.4f}")
 
-    print("\n🎉 全數訓練完成！檔案已生成。")
+    print("\n全數訓練完成！檔案已生成。")
 
 if __name__ == "__main__":
     main()
+
