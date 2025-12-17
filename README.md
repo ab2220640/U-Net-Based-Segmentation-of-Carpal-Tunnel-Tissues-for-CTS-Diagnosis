@@ -58,3 +58,12 @@ The model is evaluated using the Dice Coefficient (DSC) based on 5-fold cross-va
 git clone [https://github.com/YOUR_USERNAME/U-Net-Based-Segmentation-of-Carpal-Tunnel-Tissues.git](https://github.com/YOUR_USERNAME/U-Net-Based-Segmentation-of-Carpal-Tunnel-Tissues.git)
 cd U-Net-Based-Segmentation-of-Carpal-Tunnel-Tissues
 ```
+2. Install Dependencies
+Note for GPU Users: To enable CUDA acceleration, please install the GPU version of PyTorch using the specific command below before installing other requirements.
+```bash
+# Example for CUDA 12.1 (Adjust based on your GPU driver)
+pip install torch torchvision --index-url [https://download.pytorch.org/whl/cu121](https://download.pytorch.org/whl/cu121)
+
+# Install other dependencies
+pip install -r requirements.txt
+```
