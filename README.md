@@ -24,3 +24,4 @@ unzip dataset.zip
 ### 3. Train the Model
 Note: Pre-trained weights are not included. You need to train the model first.
 ```bash
+python train.py
