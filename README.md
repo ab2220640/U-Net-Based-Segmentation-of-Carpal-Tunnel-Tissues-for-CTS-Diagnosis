@@ -21,3 +21,6 @@ Important: Please unzip the dataset before running the code.
 ```bash
 unzip dataset.zip
 ```
+### 3. Train the Model
+Note: Pre-trained weights are not included. You need to train the model first.
+```bash
