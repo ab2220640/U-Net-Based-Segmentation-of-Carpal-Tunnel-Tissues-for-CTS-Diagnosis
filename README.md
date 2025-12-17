@@ -91,18 +91,12 @@ Once you have trained the model (or if you have pre-trained weights), launch the
 python src/inference_gui.py
 ```
 
-GUI Controls:
+**GUI Controls:**
 
-Load Model: Navigate to checkpoints/ and select a .pth file (e.g., best_model_fold_0.pth).
-
-Select Folder: Choose a case folder inside src/dataset/ (e.g., src/dataset/0).
-
-Play/Slider: Drag the slider or click "Play Animation" to view the MRI sequence.
-
-Observe:
-
-Left: Original T1 MRI
-
-Center: Ground Truth (Manual Label)
-
-Right: AI Prediction
+1.  **Load Model**: Navigate to `checkpoints/` and select a `.pth` file (e.g., `best_model_fold_0.pth`).
+2.  **Select Folder**: Choose a case folder inside `src/dataset/` (e.g., `src/dataset/0`).
+3.  **Play/Slider**: Drag the slider or click **"Play Animation"** to view the MRI sequence.
+4.  **Observe**:
+    * **Left**: Original T1 MRI
+    * **Center**: Ground Truth (Manual Label)
+    * **Right**: AI Prediction
