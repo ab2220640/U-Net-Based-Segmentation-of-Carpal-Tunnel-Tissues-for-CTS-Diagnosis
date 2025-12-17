@@ -76,3 +76,12 @@ Important: The training script looks for the dataset in the src/ folder.
    2.Place dataset.zip inside the src/ folder (or the project root).
 
    3.The train.py script will automatically unzip it upon first run.
+
+## Usage
+Training the Model
+Run the training script from the root directory. The script uses Mixed Precision (AMP) and automatically manages 5-Fold Cross Validation.
+```bash
+python src/train.py
+```
+      Note: Checkpoints will be saved in the checkpoints/ folder. The best model for each fold is saved as best_model_fold_X.pth.
+
