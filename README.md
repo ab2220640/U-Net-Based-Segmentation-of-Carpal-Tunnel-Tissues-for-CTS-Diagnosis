@@ -43,3 +43,11 @@ The project code is organized in the `src/` directory to maintain a clean root e
 ├── checkpoints/            # Stores trained models (*.pth)
 ├── requirements.txt        # Python dependencies
 └── README.md
+```
+## Performance
+The model is evaluated using the Dice Coefficient (DSC) based on 5-fold cross-validation:
+```text
+Tissue Class,Dice Score (Mean)
+Median Nerve (MN),~0.81 - 0.90
+Flexor Tendons (FT),~0.83 - 0.92
+Carpal Tunnel (CT),~0.83 - 0.95
