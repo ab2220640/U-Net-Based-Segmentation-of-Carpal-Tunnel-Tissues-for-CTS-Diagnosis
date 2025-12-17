@@ -85,3 +85,24 @@ python src/train.py
 ```
   Note: Checkpoints will be saved in the checkpoints/ folder. The best model for each fold is saved as best_model_fold_X.pth.
 
+Interactive Visualization (GUI)
+Once you have trained the model (or if you have pre-trained weights), launch the GUI to visualize the results:
+```bash
+python src/inference_gui.py
+```
+
+GUI Controls:
+
+Load Model: Navigate to checkpoints/ and select a .pth file (e.g., best_model_fold_0.pth).
+
+Select Folder: Choose a case folder inside src/dataset/ (e.g., src/dataset/0).
+
+Play/Slider: Drag the slider or click "Play Animation" to view the MRI sequence.
+
+Observe:
+
+Left: Original T1 MRI
+
+Center: Ground Truth (Manual Label)
+
+Right: AI Prediction
