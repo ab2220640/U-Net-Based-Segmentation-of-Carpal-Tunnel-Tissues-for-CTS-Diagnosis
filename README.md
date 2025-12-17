@@ -25,3 +25,10 @@ unzip dataset.zip
 Note: Pre-trained weights are not included. You need to train the model first.
 ```bash
 python train.py
+```
+This will start the training process and save the model weights (.pth) locally.
+### 4. Run the GUI
+After training, launch the visualization interface:
+```bash
+python inference_gui.py
+```
